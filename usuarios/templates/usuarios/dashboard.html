@@ -1,0 +1,30 @@
+{% extends 'usuarios/base.html' %}
+{% block title %}Panel principal{% endblock %}
+{% block content %}
+    <header class="page-heading">
+        <div>
+            <p class="eyebrow">Sistema de alquiler de equipos</p>
+            <h1>Panel de {{ rol_usuario }}</h1>
+            <p>Bienvenido, {{ nombre_usuario }}.</p>
+        </div>
+    </header>
+
+    {% if puede_consultar_maquinaria %}
+    <section class="card">
+        <h2>Maquinaria</h2>
+        {% if puede_registrar_maquinaria %}
+            <p>Registra equipos y consulta el catálogo provisional.</p>
+        {% else %}
+            <p>Consulta el catálogo, filtra por estado y revisa los detalles de los equipos. Tu acceso es de solo consulta.</p>
+        {% endif %}
+        <div class="actions">
+            <a class="button" href="{% url 'maquinaria_lista' %}">Consultar maquinaria</a>
+            {% if puede_registrar_maquinaria %}
+                <a class="button button-secondary" href="{% url 'maquinaria_registrar' %}">Registrar maquinaria</a>
+            {% endif %}
+        </div>
+    </section>
+    {% else %}
+        <section class="card"><p>Tu cuenta todavía no tiene un rol asignado. Solicita acceso al administrador.</p></section>
+    {% endif %}
+{% endblock %}

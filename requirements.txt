@@ -1,0 +1,5 @@
+# Versiones del entorno actual. Python >= 3.12; probado con Python 3.14.
+Django==6.1.2
+asgiref==3.12.1
+sqlparse==0.6.0
+tzdata==2026.5; sys_platform == "win32"

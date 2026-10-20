@@ -1,0 +1,59 @@
+# Entornos Python y cachés
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Configuración privada y secretos (solo los ejemplos se comparten)
+.env
+.env.*
+!.env.example
+config.local.json
+secrets/
+.secrets/
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*.json
+.aws/
+
+# Bases de datos, respaldos y datos de maquinaria locales
+db.sqlite3
+db.sqlite3-*
+*.sqlite3
+*.sqlite3-*
+/data/
+*.bak
+*.backup
+*.dump
+# Copias recuperadas sin validar, con posibles datos de ejemplo/personales
+/AlquilerEquipos*.sql
+/base_recuperada*.txt
+
+# Temporales, resultados generados y archivos del editor
+/tmp/
+/temp/
+/output/
+*.tmp
+*.temp
+*.log
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.codex/
+.agents/
+build/
+dist/
+*.egg-info/

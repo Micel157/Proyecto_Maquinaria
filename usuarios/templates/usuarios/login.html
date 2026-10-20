@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Iniciar sesión</title>
+</head>
+<body>
+    <h1>Sistema de alquiler de equipos</h1>
+    <h2>Iniciar sesión</h2>
+
+    <!-- Mensaje para un intento de acceso incorrecto. -->
+    {% if form.errors %}
+        <p>Usuario o contraseña incorrectos. Inténtalo de nuevo.</p>
+    {% endif %}
+
+    <!-- POST envía las credenciales sin colocarlas en la URL. -->
+    <form method="post">
+        <!-- Protección de Django contra solicitudes falsificadas. -->
+        {% csrf_token %}
+
+        <p>
+            {{ form.username.label_tag }}
+            {{ form.username }}
+            {{ form.username.errors }}
+        </p>
+
+        <p>
+            {{ form.password.label_tag }}
+            {{ form.password }}
+
+            <!-- Este botón no envía el formulario. -->
+            <button
+                type="button"
+                id="mostrar-clave"
+                aria-label="Mostrar contraseña"
+                aria-pressed="false"
+                aria-controls="id_password"
+                title="Mostrar contraseña"
+            >👁</button>
+
+            {{ form.password.errors }}
+        </p>
+
+        <!-- Oculto hasta detectar Bloq Mayús activo. -->
+        <p id="aviso-mayusculas" role="status" hidden>
+            Bloq Mayús está activado.
+        </p>
+
+        <button type="submit">Entrar</button>
+    </form>
+
+    <script>
+        // Localiza los elementos que vamos a controlar.
+        const campoClave = document.getElementById('id_password');
+        const botonOjo = document.getElementById('mostrar-clave');
+        const avisoMayusculas = document.getElementById('aviso-mayusculas');
+
+        // Un clic muestra la contraseña; otro vuelve a ocultarla.
+        botonOjo.addEventListener('click', function () {
+            const mostrar = campoClave.type === 'password';
+            campoClave.type = mostrar ? 'text' : 'password';
+
+            const descripcion = mostrar
+                ? 'Ocultar contraseña'
+                : 'Mostrar contraseña';
+
+            botonOjo.setAttribute('aria-label', descripcion);
+            botonOjo.setAttribute('aria-pressed', String(mostrar));
+            botonOjo.title = descripcion;
+        });
+
+        // Comprueba Bloq Mayús cuando se pulsa una tecla en el campo.
+        function comprobarMayusculas(evento) {
+            avisoMayusculas.hidden = !evento.getModifierState('CapsLock');
+        }
+
+        campoClave.addEventListener('keydown', comprobarMayusculas);
+        campoClave.addEventListener('keyup', comprobarMayusculas);
+
+        // Oculta el aviso cuando dejamos el campo de contraseña.
+        campoClave.addEventListener('blur', function () {
+            avisoMayusculas.hidden = true;
+        });
+    </script>
+</body>
+</html>

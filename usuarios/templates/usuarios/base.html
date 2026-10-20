@@ -1,0 +1,32 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Sistema de alquiler de equipos{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'usuarios/css/maquinaria.css' %}">
+</head>
+<body>
+    <nav class="topbar" aria-label="Navegación principal">
+        <a class="brand" href="{% url 'dashboard' %}">Alquiler de equipos</a>
+        <div class="topbar-links">
+            <span>{{ nombre_usuario }} · {{ rol_usuario }}</span>
+            <a href="{% url 'dashboard' %}">Panel</a>
+            {% if puede_consultar_maquinaria %}
+            <a href="{% url 'maquinaria_lista' %}">Maquinaria</a>
+            {% endif %}
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button class="link-button" type="submit">Cerrar sesión</button>
+            </form>
+        </div>
+    </nav>
+    <main class="container">
+        {% for message in messages %}
+            <div class="message message-{{ message.tags }}" role="status">{{ message }}</div>
+        {% endfor %}
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>
