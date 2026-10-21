@@ -1,16 +1,12 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
-from django.http import Http404
-from django.shortcuts import redirect, render
+from django.db.models import Q
+from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import MaquinariaForm
 from .roles import permisos_panel
-from .maquinaria_store import (
-    crear_maquinaria,
-    obtener_maquinaria,
-    obtener_maquinarias,
-)
+from .models import Unidad
 
 
 # Exige una sesión activa para acceder al dashboard.
@@ -24,26 +20,21 @@ def dashboard(request):
 def maquinaria_lista(request):
     if not permisos_panel(request.user)['puede_consultar_maquinaria']:
         raise PermissionDenied
-    maquinarias = obtener_maquinarias()
+    maquinarias = Unidad.objects.select_related('maquinaria__categoria').filter(
+        activo=True, maquinaria__activo=True
+    )
     consulta = request.GET.get('q', '').strip()
     estado = request.GET.get('estado', '').strip()
 
     if consulta:
-        consulta_normalizada = consulta.casefold()
-        maquinarias = [
-            maquinaria
-            for maquinaria in maquinarias
-            if any(
-                consulta_normalizada in str(maquinaria[campo]).casefold()
-                for campo in ('codigo', 'nombre', 'categoria', 'numero_serie')
-            )
-        ]
+        maquinarias = maquinarias.filter(
+            Q(maquinaria__codigo__icontains=consulta)
+            | Q(maquinaria__nombre__icontains=consulta)
+            | Q(maquinaria__categoria__nombre__icontains=consulta)
+            | Q(numero_serie__icontains=consulta)
+        )
     if estado:
-        maquinarias = [
-            maquinaria
-            for maquinaria in maquinarias
-            if maquinaria['estado'] == estado
-        ]
+        maquinarias = maquinarias.filter(estado=estado)
 
     return render(
         request,
@@ -64,9 +55,9 @@ def maquinaria_registrar(request):
     if request.method == 'POST':
         form = MaquinariaForm(request.POST)
         if form.is_valid():
-            maquinaria = crear_maquinaria(form.cleaned_data)
+            maquinaria = form.save()
             messages.success(request, 'La maquinaria se registró correctamente.')
-            return redirect('maquinaria_detalle', maquinaria_id=maquinaria['id'])
+            return redirect('maquinaria_detalle', maquinaria_id=maquinaria.id)
     else:
         form = MaquinariaForm()
 
@@ -77,9 +68,12 @@ def maquinaria_registrar(request):
 def maquinaria_detalle(request, maquinaria_id):
     if not permisos_panel(request.user)['puede_consultar_maquinaria']:
         raise PermissionDenied
-    maquinaria = obtener_maquinaria(str(maquinaria_id))
-    if maquinaria is None:
-        raise Http404('No existe esa maquinaria.')
+    maquinaria = get_object_or_404(
+        Unidad.objects.select_related('maquinaria__categoria'),
+        pk=maquinaria_id,
+        activo=True,
+        maquinaria__activo=True,
+    )
     return render(
         request,
         'usuarios/maquinaria_detalle.html',

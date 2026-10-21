@@ -3,20 +3,15 @@
 {% block content %}
 <header class="page-heading">
     <div>
-        <p class="eyebrow">HU-03 · Detalle provisional</p>
+        <p class="eyebrow">HU-03 · Detalle de maquinaria</p>
         <h1>{{ maquinaria.nombre }}</h1>
         <p>{{ maquinaria.marca }} {{ maquinaria.modelo }}</p>
     </div>
     <a class="button button-secondary" href="{% url 'maquinaria_lista' %}">Volver al listado</a>
 </header>
 
-<div class="notice" role="note">
-    Estos datos se guardan localmente como prototipo y están sujetos a cambios
-    tras recibir el esquema SQL Server actualizado.
-</div>
-
 <section class="card">
-    <h2>Datos de catálogo <span class="provisional">provisionales</span></h2>
+    <h2>Datos de catálogo</h2>
     <dl class="details-grid">
         <div><dt>Código</dt><dd>{{ maquinaria.codigo }}</dd></div>
         <div><dt>Nombre</dt><dd>{{ maquinaria.nombre }}</dd></div>
@@ -32,12 +27,13 @@
 </section>
 
 <section class="card">
-    <h2>Unidad física <span class="provisional">campos provisionales</span></h2>
+    <h2>Unidad física</h2>
     <dl class="details-grid">
         <div><dt>Número de serie</dt><dd>{{ maquinaria.numero_serie }}</dd></div>
         <div><dt>Estado</dt><dd><span class="status">{{ maquinaria.estado }}</span></dd></div>
         <div><dt>Horas de uso</dt><dd>{{ maquinaria.horas_uso }}</dd></div>
         <div><dt>Fecha de adquisición</dt><dd>{{ maquinaria.fecha_adquisicion|default:"No especificada" }}</dd></div>
+        <div><dt>Ubicación actual</dt><dd>{{ maquinaria.ubicacion_actual|default:"No especificada" }}</dd></div>
     </dl>
 </section>
 {% endblock %}

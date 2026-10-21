@@ -1,5 +1,17 @@
 {
   "SECRET_KEY": "",
   "DEBUG": true,
-  "ALLOWED_HOSTS": ["localhost", "127.0.0.1", "[::1]"]
+  "ALLOWED_HOSTS": ["localhost", "127.0.0.1", "[::1]"],
+  "DATABASE": {
+    "ENGINE": "mssql",
+    "NAME": "AlquilerEquipos",
+    "HOST": "localhost\\SQLEXPRESS",
+    "PORT": "",
+    "USER": "",
+    "PASSWORD": "",
+    "OPTIONS": {
+      "driver": "ODBC Driver 18 for SQL Server",
+      "extra_params": "TrustServerCertificate=yes"
+    }
+  }
 }
