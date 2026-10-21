@@ -91,14 +91,46 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 
 # Database
-# https://docs.djangoproject.com/en/6.1/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# SQL Server es el destino normal. Las credenciales solo viven en el archivo
+# local ignorado por Git o en variables de entorno.
+_db_local = _config_local.get('DATABASE', {})
+_db_engine = os.environ.get(
+    'DJANGO_DB_ENGINE', _db_local.get('ENGINE', 'mssql')
+)
+if _db_engine == 'django.db.backends.sqlite3':
+    DATABASES = {
+        'default': {
+            'ENGINE': _db_engine,
+            'NAME': os.environ.get(
+                'DJANGO_DB_NAME', _db_local.get('NAME', str(BASE_DIR / 'db.sqlite3'))
+            ),
+        }
     }
-}
+else:
+    _db_options = dict(_db_local.get('OPTIONS', {}))
+    _db_options.setdefault(
+        'driver', os.environ.get('DJANGO_DB_DRIVER', 'ODBC Driver 18 for SQL Server')
+    )
+    _db_extra = os.environ.get('DJANGO_DB_EXTRA_PARAMS')
+    if _db_extra:
+        _db_options['extra_params'] = _db_extra
+    DATABASES = {
+        'default': {
+            'ENGINE': _db_engine,
+            'NAME': os.environ.get(
+                'DJANGO_DB_NAME', _db_local.get('NAME', 'AlquilerEquipos')
+            ),
+            'HOST': os.environ.get(
+                'DJANGO_DB_HOST', _db_local.get('HOST', r'localhost\SQLEXPRESS')
+            ),
+            'PORT': os.environ.get('DJANGO_DB_PORT', _db_local.get('PORT', '')),
+            'USER': os.environ.get('DJANGO_DB_USER', _db_local.get('USER', '')),
+            'PASSWORD': os.environ.get(
+                'DJANGO_DB_PASSWORD', _db_local.get('PASSWORD', '')
+            ),
+            'OPTIONS': _db_options,
+        }
+    }
 
 
 # Password validation

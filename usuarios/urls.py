@@ -13,7 +13,7 @@ urlpatterns = [
     # Abre el panel; la vista exige una sesión activa.
     path('dashboard/', views.dashboard, name='dashboard'),
 
-    # Operaciones provisionales de consulta y registro de maquinaria.
+    # Consulta y registro de maquinaria almacenada en SQL Server.
     path('maquinaria/', views.maquinaria_lista, name='maquinaria_lista'),
     path(
         'maquinaria/registrar/',
@@ -21,7 +21,7 @@ urlpatterns = [
         name='maquinaria_registrar',
     ),
     path(
-        'maquinaria/<uuid:maquinaria_id>/',
+        'maquinaria/<int:maquinaria_id>/',
         views.maquinaria_detalle,
         name='maquinaria_detalle',
     ),

@@ -1,122 +1,149 @@
 # Sistema de alquiler de equipos
 
-Proyecto Django para iniciar sesión, mostrar un panel según el rol y consultar
-o registrar maquinaria. Preparado para desarrollo local y colaboración en un
-repositorio privado. No es una configuración de despliegue de producción.
-
-## Estado del almacenamiento
-
-- **SQLite** (`db.sqlite3`): usuarios, grupos, sesiones y tablas internas de Django.
-- **JSON provisional** (`data/maquinaria_provisional.json`): catálogo de maquinaria.
-  Se crea al registrar el primer equipo; un clon nuevo empieza sin maquinaria.
-  No es un almacén adecuado para escrituras concurrentes ni para producción.
-- **SQL Server pendiente de integración**: todavía no se usa desde Django.
-  Falta validar el esquema definitivo, configurar la conexión y sustituir el
-  almacenamiento provisional. No se necesita SQL Server ni un controlador ODBC
-  para ejecutar esta versión. Las copias SQL recuperadas se conservan localmente
-  y se excluyen de Git hasta su revisión.
-
-Más contexto en [docs/maquinaria-provisional.md](docs/maquinaria-provisional.md).
+Proyecto Django con inicio de sesión, panel por rol, registro y consulta de
+maquinaria. La aplicación usa SQL Server para cuentas, roles, sesiones, catálogo
+y unidades físicas.
 
 ## Requisitos
 
-- Python 3.12 o superior (entorno actual probado: Python 3.14).
-- Git para clonar y compartir cambios.
-- PowerShell en Windows para los comandos siguientes. En Linux/macOS usa
-  `python3 -m venv .venv` y `.venv/bin/python` en lugar del ejecutable de Windows.
+- Python 3.12 a 3.14 (este entorno usa Python 3.14).
+- SQL Server 2017 o posterior; se probó con SQL Server 2025 Express.
+- Microsoft ODBC Driver 18 for SQL Server.
+- PowerShell y Git en Windows.
 
-Las versiones de `requirements.txt` corresponden al entorno del proyecto;
-incluyen Django y sus dependencias actuales, sin herramientas de generación de
-documentos ni dependencias de SQL Server.
+El backend `mssql-django==2.0.0` soporta Django 6.1 y Python 3.14.
 
-## Instalar y configurar
-
-Tras clonar el repositorio privado y entrar en su carpeta, ejecuta:
+## Instalación
 
 ```powershell
 py -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe scripts/configurar_desarrollo.py
-.\.venv\Scripts\python.exe manage.py migrate
 ```
 
-Si ya tienes un entorno `.venv`, no necesitas volver a crearlo.
-El script genera `config.local.json` desde `config.local.example.json`, con una
-clave secreta aleatoria propia de tu equipo. Si el archivo existe, lo conserva.
-El ejemplo se comparte; la configuración privada está excluida de Git.
-No pongas contraseñas ni claves reales en el ejemplo o en `settings.py`.
+El último comando crea o completa `config.local.json` sin cambiar secretos ya
+existentes. Ese archivo está excluido de Git. La configuración de ejemplo usa
+autenticación integrada de Windows contra `localhost\SQLEXPRESS` y la base
+`AlquilerEquipos`:
 
-También se admiten variables de entorno, con prioridad sobre el archivo local:
+```json
+"DATABASE": {
+  "ENGINE": "mssql",
+  "NAME": "AlquilerEquipos",
+  "HOST": "localhost\\SQLEXPRESS",
+  "PORT": "",
+  "USER": "",
+  "PASSWORD": "",
+  "OPTIONS": {
+    "driver": "ODBC Driver 18 for SQL Server",
+    "extra_params": "TrustServerCertificate=yes"
+  }
+}
+```
 
-| Variable | Uso |
-| --- | --- |
-| `DJANGO_SECRET_KEY` | Clave secreta privada; obligatoria si no hay una en la configuración local. |
-| `DJANGO_DEBUG` | `true`, `1` o `yes` para desarrollo; `false` para desactivar depuración. |
-| `DJANGO_ALLOWED_HOSTS` | Nombres de host separados por comas, por ejemplo `localhost,127.0.0.1`. |
+Para autenticación SQL, escribe `USER` y `PASSWORD` solo en
+`config.local.json`. También se admiten las variables `DJANGO_DB_ENGINE`,
+`DJANGO_DB_NAME`, `DJANGO_DB_HOST`, `DJANGO_DB_PORT`, `DJANGO_DB_USER`,
+`DJANGO_DB_PASSWORD`, `DJANGO_DB_DRIVER` y `DJANGO_DB_EXTRA_PARAMS`.
 
-Sin configuración local, `DEBUG` queda desactivado. No se cargan archivos `.env`
-automáticamente: usa el JSON local o variables de entorno del proceso.
+## Preparar SQL Server
 
-## Crear cuentas independientes
+Crea una base vacía si todavía no existe:
 
-Cada compañero crea sus cuentas en su base local. Las cuentas y contraseñas no
-viajan en Git, y no se incluyen credenciales predeterminadas.
+```sql
+CREATE DATABASE [AlquilerEquipos];
+```
 
-Para crear el administrador, sigue las preguntas de Django:
+Antes de cambiar una base existente, ejecuta el inventario de solo lectura:
+
+```powershell
+sqlcmd -S ".\SQLEXPRESS" -E -C -i sql\00_inspeccionar_base.sql
+```
+
+Haz una copia desde SQL Server Management Studio o con `BACKUP DATABASE`. No
+guardes archivos `.bak` en Git. Después aplica las migraciones. `--fake-initial`
+reconoce `Categoria`, `Maquinaria` y `Unidad` si ya venían del script original;
+en una base nueva las crea.
+
+```powershell
+.\.venv\Scripts\python.exe manage.py migrate --fake-initial
+```
+
+Las migraciones de Django son la fuente de verdad para el módulo implementado.
+Los archivos siguientes conservan y corrigen por separado los objetos futuros
+del script del compañero:
+
+- `sql/01_completar_esquema_legacy.sql`: crea los objetos omitidos y corrige
+  referencias de `Equipo` a `Maquinaria`.
+- `sql/02_procedimientos_legacy_corregidos.sql`: procedimientos derivados del
+  original con nombres corregidos y `CREATE OR ALTER`.
+- `docs/revision-script-original.md`: hallazgos, diferencias y orden correcto.
+
+Los scripts son aditivos. No eliminan ni reemplazan filas. El módulo web actual
+no depende de los procedimientos de alquiler.
+
+## Migrar datos locales anteriores
+
+Conserva `db.sqlite3` y `data/maquinaria_provisional.json` como respaldo. Con la
+conexión SQL Server activa, ejecuta:
+
+```powershell
+.\.venv\Scripts\python.exe manage.py migrar_datos_locales
+```
+
+El comando:
+
+- copia usuarios sin recalcular sus contraseñas: conserva exactamente el hash;
+- copia grupos, membresías y permisos compatibles;
+- convierte el JSON en `Categoria`, `Maquinaria` y `Unidad`;
+- no actualiza usuarios, códigos o números de serie que ya existan;
+- verifica al final que usuarios, hashes, roles y unidades estén presentes;
+- se puede repetir sin duplicar datos.
+
+Se pueden indicar rutas distintas con `--sqlite` y `--json`.
+
+## Roles y acceso
+
+| Rol | Consultar, filtrar y ver detalles | Registrar | Django Admin |
+| --- | --- | --- | --- |
+| Administrador (`is_superuser`) | Sí | Sí | Sí |
+| Supervisor (grupo `Supervisor`) | Sí | No | No |
+| Sin rol | No | No | No |
+
+La vista de registro comprueba el rol en el servidor. Un Supervisor recibe HTTP
+403 aunque escriba directamente `/maquinaria/registrar/` o envíe un POST.
+
+Para crear cuentas nuevas:
 
 ```powershell
 .\.venv\Scripts\python.exe manage.py createsuperuser
-```
-
-Para crear un supervisor llamado `luis`, mostrar el nombre Luis y asignarle una
-contraseña de forma interactiva:
-
-```powershell
 .\.venv\Scripts\python.exe manage.py crear_supervisor luis --nombre "Luis"
 .\.venv\Scripts\python.exe manage.py changepassword luis
 ```
 
-`crear_supervisor` crea o asigna la cuenta al grupo `Supervisor`, sin permisos de
-superusuario ni acceso a Django Admin. Repetirlo conserva su contraseña. Si el
-nombre pertenece a una cuenta administrativa, rechaza la operación. En este
-equipo la cuenta existente ya se llama `luis`; no necesitas crear otra ni cambiar
-su contraseña para preparar el repositorio.
-
-| Rol | Consultar y filtrar maquinaria / ver detalles | Registrar | Django Admin |
-| --- | --- | --- | --- |
-| Administrador | Sí | Sí | Sí |
-| Supervisor | Sí | No | No |
-| Sin rol asignado | No | No | No |
-
-Ambas cuentas usan `/login/` y acceden a `/dashboard/`, donde aparecen su nombre
-y rol. Más detalles en [docs/cuentas-y-roles.md](docs/cuentas-y-roles.md).
-
-## Ejecutar y comprobar
+## Comprobar y ejecutar
 
 ```powershell
 .\.venv\Scripts\python.exe manage.py check
+.\.venv\Scripts\python.exe manage.py makemigrations --check --dry-run
 .\.venv\Scripts\python.exe manage.py test usuarios
 .\.venv\Scripts\python.exe manage.py runserver
 ```
 
 Abre <http://127.0.0.1:8000/login/>. El administrador de Django está en
-<http://127.0.0.1:8000/admin/> y requiere una cuenta administrativa.
-El servidor de desarrollo se detiene con `Ctrl+C`.
+<http://127.0.0.1:8000/admin/>.
 
-## Archivos que se comparten
+Las pruebas usan una base temporal `test_AlquilerEquipos` en la misma instancia
+SQL Server y la eliminan al terminar. La cuenta configurada debe poder crear y
+eliminar esa base de prueba.
 
-Se versionan `manage.py`, `config/`, `usuarios/` (incluidas sus migraciones,
-plantillas, CSS y pruebas), `scripts/`, `docs/`, `requirements.txt`, este README,
-`.gitignore` y `config.local.example.json`.
+## Archivos locales y Git
 
-`.gitignore` excluye `.venv`, cachés, `.env` y sus variantes privadas, claves y
-credenciales habituales, `config.local.json`, SQLite, `data/`, `tmp/`, `output/`,
-respaldos y copias SQL recuperadas. La exclusión no borra los archivos locales.
-No uses `git add -f` para incluir estos archivos. Si más adelante se añade un
-esquema SQL revisado y sin datos sensibles, debe guardarse con una ruta y una
-política de versionado explícitas.
+`.gitignore` excluye `config.local.json`, `.env`, claves, SQLite, `data/`,
+respaldos, copias SQL originales, `tmp/`, `output/`, el entorno virtual y cachés.
+No uses `git add -f` con esos archivos.
 
-Antes de cada commit, revisa:
+Antes de compartir cambios:
 
 ```powershell
 git status --short
@@ -124,33 +151,5 @@ git diff --cached --stat
 git diff --cached
 ```
 
-El `.gitignore` no protege secretos que ya estuvieran en el historial. Si alguna
-vez se publica una clave, debe sustituirse y revisarse ese historial.
-
-## Repositorio del equipo
-
-Repositorio: <https://github.com/giorgioRD/Alquiler_maquinaria>.
-Para descargarlo, necesitas acceso concedido por su propietario y autenticarte
-en GitHub. Después ejecuta:
-
-```powershell
-git clone https://github.com/giorgioRD/Alquiler_maquinaria.git
-cd Alquiler_maquinaria
-```
-
-Sigue las instrucciones de instalación y creación de cuentas anteriores. Para
-compartir trabajo, crea una rama y revisa siempre los archivos del commit:
-
-```powershell
-git switch -c mi-cambio
-git add .
-git diff --cached --stat
-git diff --cached
-git commit -m "Describir el cambio realizado"
-git push -u origin mi-cambio
-```
-
-Abre un pull request para revisar y combinar el cambio con `main`. El propietario
-debe mantener el repositorio privado e invitar a sus compañeros. Cada uno deberá
-generar su configuración y sus cuentas locales. No compartas tu `db.sqlite3` ni
-tu configuración privada.
+Trabaja en una rama y usa un pull request para no sobrescribir cambios de otras
+personas. Repositorio: <https://github.com/giorgioRD/Alquiler_maquinaria>.

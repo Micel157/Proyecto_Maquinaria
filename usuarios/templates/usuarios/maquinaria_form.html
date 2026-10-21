@@ -5,15 +5,9 @@
     <div>
         <p class="eyebrow">HU-02 · Sprint 2</p>
         <h1>Registrar maquinaria</h1>
-        <p>Completa los datos disponibles para el registro provisional.</p>
+        <p>Completa los datos del catálogo y de la unidad física.</p>
     </div>
 </header>
-
-<div class="notice" role="note">
-    <strong>Prototipo:</strong> los campos están pendientes de validar con el SQL
-    Server actualizado. El registro se guarda solo en un archivo local JSON; no
-    modifica la base de datos.
-</div>
 
 <form class="card form-card" method="post" novalidate>
     {% csrf_token %}
@@ -22,7 +16,7 @@
     {% endif %}
 
     <fieldset>
-        <legend>Datos de catálogo <span class="provisional">provisionales</span></legend>
+        <legend>Datos de catálogo</legend>
         <div class="form-grid">
             {% for field in form %}
                 {% if field.name in 'codigo nombre categoria marca modelo costo_adquisicion tarifa_diaria tarifa_semanal tarifa_mensual deposito_garantia' %}
@@ -38,7 +32,7 @@
     </fieldset>
 
     <fieldset>
-        <legend>Datos de la unidad física <span class="provisional">provisionales</span></legend>
+        <legend>Datos de la unidad física</legend>
         <div class="form-grid">
             {% for field in form %}
                 {% if field.name in 'numero_serie estado horas_uso fecha_adquisicion' %}
@@ -54,7 +48,7 @@
     </fieldset>
 
     <div class="actions">
-        <button class="button" type="submit">Guardar registro provisional</button>
+        <button class="button" type="submit">Guardar maquinaria</button>
         <a class="button button-secondary" href="{% url 'maquinaria_lista' %}">Cancelar</a>
     </div>
 </form>
