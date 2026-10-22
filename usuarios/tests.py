@@ -4,10 +4,12 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.management import call_command
 from django.core.management.base import CommandError
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
 
 from .models import Categoria, Maquinaria, Unidad
+from .validators import anio_actual
 
 
 def crear_unidad(codigo='RET-001', serie='SERIE-001', estado='Disponible'):
@@ -46,6 +48,8 @@ class MaquinariaViewsTests(TestCase):
             'deposito_garantia': '500.00', 'numero_serie': 'SERIE-001',
             'estado': 'Disponible', 'horas_uso': '12.5',
             'fecha_adquisicion': '',
+            'anio_fabricacion': str(anio_actual()),
+            'ubicacion_actual': '  Almacén central  ',
         }
 
     def test_maquinaria_pages_require_login(self):
@@ -60,6 +64,9 @@ class MaquinariaViewsTests(TestCase):
         respuesta = self.client.post(reverse('maquinaria_registrar'), self.datos)
         self.assertEqual(respuesta.status_code, 302)
         unidad = Unidad.objects.select_related('maquinaria').get()
+        unidad.refresh_from_db()
+        self.assertEqual(unidad.anio_fabricacion, anio_actual())
+        self.assertEqual(unidad.ubicacion_actual, 'Almacén central')
         self.assertRedirects(
             respuesta,
             reverse('maquinaria_detalle', kwargs={'maquinaria_id': unidad.id}),
@@ -76,6 +83,10 @@ class MaquinariaViewsTests(TestCase):
         )
         detalle = self.client.get(reverse('maquinaria_detalle', args=[unidad.id]))
         self.assertContains(detalle, 'SERIE-001')
+        self.assertContains(detalle, str(anio_actual()))
+        self.assertContains(detalle, 'Año de fabricación')
+        self.assertContains(detalle, 'Almacén central')
+        self.assertContains(self.client.get(reverse('maquinaria_lista')), 'Almacén central')
         self.assertContains(detalle, 'Construcción')
 
     def test_invalid_input_displays_field_validation(self):
@@ -109,6 +120,54 @@ class MaquinariaViewsTests(TestCase):
             self.client.get(reverse('maquinaria_detalle', args=[999999])).status_code,
             404,
         )
+
+    def test_registration_form_includes_new_fields(self):
+        respuesta = self.client.get(reverse('maquinaria_registrar'))
+        self.assertContains(respuesta, 'name="anio_fabricacion"')
+        self.assertContains(respuesta, f'max="{anio_actual()}"')
+        self.assertContains(respuesta, 'name="ubicacion_actual"')
+
+    def test_invalid_year_or_missing_location_does_not_create_records(self):
+        for cambios, campo in (
+            ({'anio_fabricacion': str(anio_actual() + 1)}, 'anio_fabricacion'),
+            ({'anio_fabricacion': '0'}, 'anio_fabricacion'),
+            ({'anio_fabricacion': '2020.5'}, 'anio_fabricacion'),
+            ({'anio_fabricacion': ''}, 'anio_fabricacion'),
+            ({'ubicacion_actual': ''}, 'ubicacion_actual'),
+            ({'ubicacion_actual': '   '}, 'ubicacion_actual'),
+            ({'ubicacion_actual': 'x' * 201}, 'ubicacion_actual'),
+        ):
+            with self.subTest(cambios=cambios):
+                respuesta = self.client.post(
+                    reverse('maquinaria_registrar'), {**self.datos, **cambios}
+                )
+                self.assertEqual(respuesta.status_code, 200)
+                self.assertIn(campo, respuesta.context['form'].errors)
+                self.assertFalse(Unidad.objects.exists())
+                self.assertFalse(Maquinaria.objects.exists())
+                self.assertFalse(Categoria.objects.exists())
+
+    def test_legacy_unknown_values_are_displayed_without_fabricating_data(self):
+        unidad = crear_unidad()
+        unidad.refresh_from_db()
+        self.assertIsNone(unidad.anio_fabricacion)
+        self.assertIsNone(unidad.ubicacion_actual)
+        detalle = self.client.get(reverse('maquinaria_detalle', args=[unidad.id]))
+        self.assertContains(detalle, 'No especificado')
+        self.assertContains(detalle, 'No especificada')
+        self.assertContains(self.client.get(reverse('maquinaria_lista')), 'No especificada')
+        unidad.full_clean()  # Las unidades existentes pueden conservar su ubicación nula.
+
+    def test_model_validation_rejects_future_year_and_new_empty_location(self):
+        unidad = crear_unidad()
+        unidad.anio_fabricacion = anio_actual() + 1
+        with self.assertRaises(ValidationError) as error:
+            unidad.full_clean()
+        self.assertIn('anio_fabricacion', error.exception.message_dict)
+        nueva = Unidad(maquinaria=unidad.maquinaria, numero_serie='NUEVA')
+        with self.assertRaises(ValidationError) as error:
+            nueva.full_clean()
+        self.assertIn('ubicacion_actual', error.exception.message_dict)
 
 
 class SupervisorTests(TestCase):
@@ -144,9 +203,16 @@ class SupervisorTests(TestCase):
 
     def test_supervisor_can_consult_but_cannot_register_by_direct_url(self):
         unidad = crear_unidad()
+        unidad.anio_fabricacion = 2020
+        unidad.ubicacion_actual = 'Patio norte'
+        unidad.save()
         self.client.force_login(self.supervisor)
         lista = self.client.get(reverse('maquinaria_lista'))
         self.assertEqual(lista.status_code, 200)
+        self.assertContains(lista, 'Patio norte')
+        detalle = self.client.get(reverse('maquinaria_detalle', args=[unidad.id]))
+        self.assertContains(detalle, 'Patio norte')
+        self.assertContains(detalle, '2020')
         self.assertNotContains(lista, reverse('maquinaria_registrar'))
         self.assertEqual(
             self.client.get(reverse('maquinaria_detalle', args=[unidad.id])).status_code,
@@ -172,6 +238,45 @@ class SupervisorTests(TestCase):
             reverse('maquinaria_detalle', args=[999999]),
         ):
             self.assertEqual(self.client.get(url).status_code, 403)
+
+    def test_custom_permission_denied_page_with_debug_enabled_and_disabled(self):
+        sin_rol = get_user_model().objects.create_user(username='sinrol403')
+        for debug in (True, False):
+            with self.settings(DEBUG=debug):
+                for usuario, urls in (
+                    (self.supervisor, (reverse('maquinaria_registrar'),)),
+                    (sin_rol, (
+                        reverse('maquinaria_lista'),
+                        reverse('maquinaria_registrar'),
+                        reverse('maquinaria_detalle', args=[999999]),
+                    )),
+                ):
+                    self.client.force_login(usuario)
+                    for url in urls:
+                        for metodo in (self.client.get, self.client.post):
+                            with self.subTest(
+                                debug=debug, usuario=usuario.username,
+                                url=url, metodo=metodo.__name__,
+                            ):
+                                respuesta = metodo(url, self._datos_post())
+                                self.assertTemplateUsed(respuesta, 'usuarios/acceso_denegado.html')
+                                self.assertContains(
+                                    respuesta, 'data-page="acceso-denegado"', status_code=403,
+                                )
+                                self.assertContains(respuesta, 'Acceso denegado', status_code=403)
+                                self.assertContains(
+                                    respuesta, 'No tienes permisos para acceder a esta página.',
+                                    status_code=403,
+                                )
+                                self.assertContains(
+                                    respuesta,
+                                    f'<a class="button" href="{reverse("dashboard")}">Volver al panel</a>',
+                                    status_code=403, html=True,
+                                )
+                                self.assertNotContains(respuesta, 'Guardar maquinaria', status_code=403)
+                                self.assertEqual(self.client.get(reverse('dashboard')).status_code, 200)
+        self.assertFalse(Unidad.objects.exists())
+        self.assertFalse(Maquinaria.objects.exists())
 
     def test_command_creates_account_and_preserves_password_on_rerun(self):
         call_command('crear_supervisor', 'nuevo', nombre='Luis', stdout=StringIO())
@@ -203,4 +308,5 @@ class SupervisorTests(TestCase):
             'tarifa_mensual': '1', 'deposito_garantia': '0',
             'numero_serie': 'PROHIBIDO', 'estado': 'Disponible',
             'horas_uso': '0',
+            'anio_fabricacion': '2020', 'ubicacion_actual': 'Patio norte',
         }

@@ -1,0 +1,10 @@
+{% extends 'usuarios/base.html' %}
+{% block title %}Acceso denegado{% endblock %}
+{% block content %}
+<section class="card empty-state" data-page="acceso-denegado">
+    <p class="eyebrow">Error 403</p>
+    <h1>Acceso denegado</h1>
+    <p>No tienes permisos para acceder a esta página.</p>
+    <a class="button" href="{% url 'dashboard' %}">Volver al panel</a>
+</section>
+{% endblock %}

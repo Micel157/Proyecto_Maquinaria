@@ -46,6 +46,7 @@
                     <th>Categoría</th>
                     <th>Número de serie</th>
                     <th>Estado</th>
+                    <th>Ubicación actual</th>
                     <th><span class="sr-only">Acciones</span></th>
                 </tr>
             </thead>
@@ -57,6 +58,7 @@
                         <td>{{ maquinaria.categoria }}</td>
                         <td>{{ maquinaria.numero_serie }}</td>
                         <td><span class="status">{{ maquinaria.estado }}</span></td>
+                        <td>{{ maquinaria.ubicacion_actual|default:"No especificada" }}</td>
                         <td><a href="{% url 'maquinaria_detalle' maquinaria_id=maquinaria.id %}">Ver detalles</a></td>
                     </tr>
                 {% endfor %}

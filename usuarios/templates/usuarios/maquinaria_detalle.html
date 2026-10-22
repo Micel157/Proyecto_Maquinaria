@@ -30,6 +30,7 @@
     <h2>Unidad física</h2>
     <dl class="details-grid">
         <div><dt>Número de serie</dt><dd>{{ maquinaria.numero_serie }}</dd></div>
+        <div><dt>Año de fabricación</dt><dd>{{ maquinaria.anio_fabricacion|default_if_none:"No especificado" }}</dd></div>
         <div><dt>Estado</dt><dd><span class="status">{{ maquinaria.estado }}</span></dd></div>
         <div><dt>Horas de uso</dt><dd>{{ maquinaria.horas_uso }}</dd></div>
         <div><dt>Fecha de adquisición</dt><dd>{{ maquinaria.fecha_adquisicion|default:"No especificada" }}</dd></div>

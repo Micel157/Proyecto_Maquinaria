@@ -17,6 +17,8 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
+handler403 = 'usuarios.views.acceso_denegado'
+
 # Lista de rutas principales del proyecto.
 urlpatterns = [
     # Acceso al administrador de Django.
