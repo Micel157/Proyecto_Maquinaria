@@ -9,6 +9,10 @@ from .roles import permisos_panel
 from .models import Unidad
 
 
+def acceso_denegado(request, exception):
+    return render(request, 'usuarios/acceso_denegado.html', status=403)
+
+
 # Exige una sesión activa para acceder al dashboard.
 @login_required
 def dashboard(request):

@@ -1,5 +1,8 @@
-from django.core.validators import MinValueValidator
+from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+
+from .validators import anio_actual
 
 
 class Categoria(models.Model):
@@ -127,6 +130,13 @@ class Unidad(models.Model):
     ubicacion_actual = models.CharField(
         max_length=200, blank=True, null=True, db_column='UbicacionActual'
     )
+    anio_fabricacion = models.PositiveSmallIntegerField(
+        'año de fabricación',
+        blank=True,
+        null=True,
+        db_column='AnioFabricacion',
+        validators=(MinValueValidator(1), MaxValueValidator(anio_actual)),
+    )
     identificador_legacy = models.UUIDField(
         blank=True, null=True, unique=True, db_column='IdentificadorLegacy'
     )
@@ -149,6 +159,13 @@ class Unidad(models.Model):
 
     def __str__(self):
         return f'{self.maquinaria.codigo} / {self.numero_serie}'
+
+    def clean(self):
+        super().clean()
+        if self._state.adding and not (self.ubicacion_actual or '').strip():
+            raise ValidationError({
+                'ubicacion_actual': 'La ubicación actual es obligatoria en registros nuevos.'
+            })
 
     @property
     def codigo(self):

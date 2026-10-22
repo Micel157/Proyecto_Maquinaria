@@ -35,7 +35,7 @@
         <legend>Datos de la unidad física</legend>
         <div class="form-grid">
             {% for field in form %}
-                {% if field.name in 'numero_serie estado horas_uso fecha_adquisicion' %}
+                {% if field.name in 'numero_serie estado horas_uso fecha_adquisicion anio_fabricacion ubicacion_actual' %}
                     <div class="field">
                         {{ field.label_tag }}
                         {{ field }}

@@ -1,7 +1,9 @@
 from django import forms
+from django.core.validators import MaxValueValidator
 from django.db import transaction
 
 from .models import Categoria, Maquinaria, Unidad
+from .validators import anio_actual
 
 
 class MaquinariaForm(forms.Form):
@@ -77,6 +79,17 @@ class MaquinariaForm(forms.Form):
         input_formats=('%Y-%m-%d',),
         widget=forms.DateInput(attrs={'type': 'date'}),
     )
+    anio_fabricacion = forms.IntegerField(
+        label='Año de fabricación', min_value=1,
+        validators=(MaxValueValidator(anio_actual),),
+    )
+    ubicacion_actual = forms.CharField(
+        label='Ubicación actual', max_length=200, strip=True,
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['anio_fabricacion'].widget.attrs['max'] = anio_actual()
 
     def clean_codigo(self):
         codigo = self.cleaned_data['codigo']
@@ -118,4 +131,6 @@ class MaquinariaForm(forms.Form):
             estado=datos['estado'],
             horas_uso=datos['horas_uso'],
             fecha_adquisicion=datos['fecha_adquisicion'],
+            anio_fabricacion=datos['anio_fabricacion'],
+            ubicacion_actual=datos['ubicacion_actual'],
         )

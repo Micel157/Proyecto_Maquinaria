@@ -137,6 +137,32 @@ Las pruebas usan una base temporal `test_AlquilerEquipos` en la misma instancia
 SQL Server y la eliminan al terminar. La cuenta configurada debe poder crear y
 eliminar esa base de prueba.
 
+## HU-02 y HU-03: fabricación y ubicación
+
+El registro de una unidad exige año de fabricación (entero desde 1 hasta el año
+actual) y ubicación actual (hasta 200 caracteres, sin aceptar solo espacios).
+El año se valida al recibir el formulario y al validar el modelo. La ubicación
+también se exige al validar un modelo nuevo, incluido el formulario de Django
+Admin. El administrador registra y consulta; el supervisor solo consulta.
+
+Se reutiliza `Unidad.UbicacionActual`. La migración
+`usuarios/0004_anio_fabricacion_unidad` añade `Unidad.AnioFabricacion`, nullable
+y sin valor predeterminado. No modifica las ubicaciones ni rellena años antiguos.
+Ambos campos pertenecen a cada unidad física, ya que un mismo modelo de catálogo
+puede tener unidades fabricadas en años distintos y en diferentes ubicaciones.
+El detalle muestra ambos datos; el listado muestra la ubicación. Los datos
+desconocidos aparecen como «No especificado/a» sin guardar ese texto en la base.
+
+La página de acceso denegado usa un manejador 403 explícito y muestra un botón
+para volver al panel. Conserva el estado HTTP 403 con `DEBUG=True` y `False`.
+
+Verificación del 22 de octubre de 2026: 15 pruebas aprobadas en SQL Server,
+incluyendo registro y lectura de los valores persistidos, validaciones, campos
+en las plantillas, visualización de valores desconocidos y permisos por rol.
+`manage.py check` y `makemigrations --check --dry-run` también pasaron.
+La migración se aplicó en la base local y se compararon todas las columnas
+anteriores, conservando los datos existentes y los valores desconocidos nulos.
+
 ## Archivos locales y Git
 
 `.gitignore` excluye `config.local.json`, `.env`, claves, SQLite, `data/`,
