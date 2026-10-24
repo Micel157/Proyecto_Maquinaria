@@ -1,30 +1,191 @@
-{% extends 'usuarios/base.html' %}
-{% block title %}Panel principal{% endblock %}
-{% block content %}
-    <header class="page-heading">
-        <div>
-            <p class="eyebrow">Sistema de alquiler de equipos</p>
-            <h1>Panel de {{ rol_usuario }}</h1>
-            <p>Bienvenido, {{ nombre_usuario }}.</p>
-        </div>
-    </header>
 
-    {% if puede_consultar_maquinaria %}
-    <section class="card">
-        <h2>Maquinaria</h2>
-        {% if puede_registrar_maquinaria %}
-            <p>Registra equipos y consulta el catálogo en SQL Server.</p>
-        {% else %}
-            <p>Consulta el catálogo, filtra por estado y revisa los detalles de los equipos. Tu acceso es de solo consulta.</p>
-        {% endif %}
-        <div class="actions">
-            <a class="button" href="{% url 'maquinaria_lista' %}">Consultar maquinaria</a>
+{% extends 'usuarios/base.html' %}
+
+{% block title %}Panel principal | Alquiler de equipos{% endblock %}
+
+{% block content %}
+
+<header class="dashboard-heading">
+    <div>
+        <p class="eyebrow">Sistema de alquiler de equipos</p>
+        <h1>Bienvenido, {{ nombre_usuario }}</h1>
+        <p class="heading-description">
+            Panel de control de alquiler y gestión de maquinaria pesada.
+        </p>
+    </div>
+
+    <div class="dashboard-date">
+        <span class="date-icon">▦</span>
+        <div>
+            <strong>{% now "l, d \d\e F \d\e Y" %}</strong>
+            <span>Panel de {{ rol_usuario }}</span>
+        </div>
+    </div>
+</header>
+
+{% if puede_consultar_maquinaria %}
+
+<section class="dashboard-stats">
+
+    <article class="stat-card">
+        <div class="stat-icon stat-blue">⚙</div>
+        <div class="stat-info">
+            <span>Gestión de equipos</span>
+            <h2>Maquinaria</h2>
+            <p>Catálogo de equipos</p>
+        </div>
+    </article>
+
+    <article class="stat-card">
+        <div class="stat-icon stat-green">✓</div>
+        <div class="stat-info">
+            <span>Acceso al sistema</span>
+            <h2>Autorizado</h2>
+            <p>Permisos según tu rol</p>
+        </div>
+    </article>
+
+    <article class="stat-card">
+        <div class="stat-icon stat-orange">▤</div>
+        <div class="stat-info">
+            <span>Base de datos</span>
+            <h2>SQL Server</h2>
+            <p>Catálogo de maquinaria</p>
+        </div>
+    </article>
+
+    <article class="stat-card">
+        <div class="stat-icon stat-purple">♙</div>
+        <div class="stat-info">
+            <span>Sesión actual</span>
+            <h2>{{ rol_usuario }}</h2>
+            <p>Usuario: {{ nombre_usuario }}</p>
+        </div>
+    </article>
+
+</section>
+
+<section class="dashboard-grid">
+
+    <article class="dashboard-panel machinery-panel">
+        <div class="panel-heading">
+            <div>
+                <p class="panel-eyebrow">Administración de equipos</p>
+                <h2>Maquinaria</h2>
+            </div>
+
+            <span class="panel-icon">⚙</span>
+        </div>
+
+        <p class="panel-description">
             {% if puede_registrar_maquinaria %}
-                <a class="button button-secondary" href="{% url 'maquinaria_registrar' %}">Registrar maquinaria</a>
+                Administra el catálogo de maquinaria pesada. Consulta los
+                equipos existentes o registra nuevos equipos en el sistema.
+            {% else %}
+                Consulta el catálogo de maquinaria pesada, filtra por estado
+                y revisa los detalles de los equipos. Tu acceso es de solo consulta.
+            {% endif %}
+        </p>
+
+        <div class="feature-list">
+            <div class="feature-item">
+                <span class="feature-check">✓</span>
+                <span>Consultar catálogo de maquinaria</span>
+            </div>
+
+            <div class="feature-item">
+                <span class="feature-check">✓</span>
+                <span>Revisar información y estado de los equipos</span>
+            </div>
+
+            {% if puede_registrar_maquinaria %}
+            <div class="feature-item">
+                <span class="feature-check">✓</span>
+                <span>Registrar nuevos equipos</span>
+            </div>
             {% endif %}
         </div>
-    </section>
-    {% else %}
-        <section class="card"><p>Tu cuenta todavía no tiene un rol asignado. Solicita acceso al administrador.</p></section>
-    {% endif %}
+
+        <div class="panel-actions">
+            <a class="button" href="{% url 'maquinaria_lista' %}">
+                Consultar maquinaria
+                <span aria-hidden="true">→</span>
+            </a>
+
+            {% if puede_registrar_maquinaria %}
+            <a class="button button-secondary"
+               href="{% url 'maquinaria_registrar' %}">
+                + Registrar maquinaria
+            </a>
+            {% endif %}
+        </div>
+    </article>
+
+    <aside class="dashboard-panel access-panel">
+        <div class="panel-heading">
+            <div>
+                <p class="panel-eyebrow">Cuenta actual</p>
+                <h2>Tu acceso</h2>
+            </div>
+
+            <span class="panel-icon">♙</span>
+        </div>
+
+        <div class="profile-card">
+            <div class="profile-avatar">
+                {{ nombre_usuario|first|upper }}
+            </div>
+            <div class="profile-details">
+                <h3>{{ nombre_usuario }}</h3>
+                <p>Usuario del sistema</p>
+            </div>
+        </div>
+
+        <div class="access-detail">
+            <span>Rol asignado</span>
+            <strong>{{ rol_usuario }}</strong>
+        </div>
+
+        <div class="access-detail">
+            <span>Consultar maquinaria</span>
+            {% if puede_consultar_maquinaria %}
+                <span class="status status-success">Permitido</span>
+            {% else %}
+                <span class="status status-warning">No disponible</span>
+            {% endif %}
+        </div>
+
+        <div class="access-detail">
+            <span>Registrar maquinaria</span>
+            {% if puede_registrar_maquinaria %}
+                <span class="status status-success">Permitido</span>
+            {% else %}
+                <span class="status status-neutral">Solo consulta</span>
+            {% endif %}
+        </div>
+
+        <div class="access-notice">
+            <span aria-hidden="true">ⓘ</span>
+            <p>
+                Las funciones disponibles dependen de los permisos
+                asignados a tu cuenta.
+            </p>
+        </div>
+    </aside>
+
+</section>
+
+{% else %}
+
+<section class="dashboard-panel no-access-panel">
+    <div class="no-access-icon">🔒</div>
+    <h2>Acceso pendiente de configuración</h2>
+    <p>
+        Tu cuenta todavía no tiene un rol autorizado para consultar maquinaria.
+        Solicita al administrador que revise tus permisos.
+    </p>
+</section>
+
+{% endif %}
+
 {% endblock %}

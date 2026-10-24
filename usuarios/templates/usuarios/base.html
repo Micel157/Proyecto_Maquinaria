@@ -1,32 +1,233 @@
+
 {% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+
     <title>{% block title %}Sistema de alquiler de equipos{% endblock %}</title>
+
     <link rel="stylesheet" href="{% static 'usuarios/css/maquinaria.css' %}">
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+    {% block extra_css %}{% endblock %}
 </head>
+
 <body>
-    <nav class="topbar" aria-label="Navegación principal">
-        <a class="brand" href="{% url 'dashboard' %}">Alquiler de equipos</a>
-        <div class="topbar-links">
-            <span>{{ nombre_usuario }} · {{ rol_usuario }}</span>
-            <a href="{% url 'dashboard' %}">Panel</a>
+
+<div class="admin-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+
+        <a class="brand" href="{% url 'dashboard' %}">
+            <div class="brand-icon">
+                <i class="fa-solid fa-truck-ramp-box"></i>
+            </div>
+
+            <div class="brand-text">
+                <h2>MaquiRent</h2>
+                <span>Gestión de Maquinaria Pesada</span>
+            </div>
+        </a>
+
+        <nav class="sidebar-nav" aria-label="Menú principal">
+
+            <a href="{% url 'dashboard' %}"
+               class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                <i class="fa-solid fa-house"></i>
+                <span>Inicio</span>
+            </a>
+
             {% if puede_consultar_maquinaria %}
-            <a href="{% url 'maquinaria_lista' %}">Maquinaria</a>
+            <a href="{% url 'maquinaria_lista' %}"
+               class="nav-link {% if request.resolver_match.url_name == 'maquinaria_lista' %}active{% endif %}">
+                <i class="fa-solid fa-truck-monster"></i>
+                <span>Maquinarias</span>
+            </a>
             {% endif %}
-            <form method="post" action="{% url 'logout' %}">
-                {% csrf_token %}
-                <button class="link-button" type="submit">Cerrar sesión</button>
-            </form>
+
+            <!-- Módulos pendientes de implementar -->
+            <a href="#" class="nav-link nav-disabled"
+               aria-disabled="true" title="Próximamente">
+                <i class="fa-solid fa-users"></i>
+                <span>Clientes</span>
+            </a>
+
+            <a href="#" class="nav-link nav-disabled"
+               aria-disabled="true" title="Próximamente">
+                <i class="fa-solid fa-file-contract"></i>
+                <span>Alquileres</span>
+            </a>
+
+            <a href="#" class="nav-link nav-disabled"
+               aria-disabled="true" title="Próximamente">
+                <i class="fa-solid fa-file-invoice-dollar"></i>
+                <span>Pagos y Facturación</span>
+            </a>
+
+            <a href="#" class="nav-link nav-disabled"
+               aria-disabled="true" title="Próximamente">
+                <i class="fa-solid fa-screwdriver-wrench"></i>
+                <span>Mantenimientos</span>
+            </a>
+
+            <a href="#" class="nav-link nav-disabled"
+               aria-disabled="true" title="Próximamente">
+                <i class="fa-solid fa-user-gear"></i>
+                <span>Operadores</span>
+            </a>
+
+            <a href="#" class="nav-link nav-disabled"
+               aria-disabled="true" title="Próximamente">
+                <i class="fa-solid fa-gears"></i>
+                <span>Repuestos</span>
+            </a>
+
+            <a href="#" class="nav-link nav-disabled"
+               aria-disabled="true" title="Próximamente">
+                <i class="fa-solid fa-folder-open"></i>
+                <span>Documentos</span>
+            </a>
+
+            <a href="#" class="nav-link nav-disabled"
+               aria-disabled="true" title="Próximamente">
+                <i class="fa-solid fa-chart-line"></i>
+                <span>Reportes</span>
+            </a>
+
+            <a href="#" class="nav-link nav-disabled"
+               aria-disabled="true" title="Próximamente">
+                <i class="fa-solid fa-sliders"></i>
+                <span>Configuración</span>
+            </a>
+
+        </nav>
+
+        <!-- USUARIO -->
+        <div class="sidebar-user">
+            <div class="sidebar-avatar">
+                {{ nombre_usuario|first|upper }}
+            </div>
+
+            <div class="sidebar-user-info">
+                <strong>{{ nombre_usuario }}</strong>
+                <span>{{ rol_usuario }}</span>
+            </div>
         </div>
-    </nav>
-    <main class="container">
-        {% for message in messages %}
-            <div class="message message-{{ message.tags }}" role="status">{{ message }}</div>
-        {% endfor %}
-        {% block content %}{% endblock %}
-    </main>
+
+    </aside>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="main-wrapper">
+
+        <!-- BARRA SUPERIOR -->
+        <header class="topbar">
+
+            <div class="topbar-left">
+                <button type="button"
+                        class="menu-toggle"
+                        id="sidebarToggle"
+                        aria-label="Abrir o cerrar menú"
+                        aria-controls="sidebar"
+                        aria-expanded="false">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+
+                <div class="breadcrumb">
+                    <span>Sistema</span>
+                    <i class="fa-solid fa-chevron-right"></i>
+                    <strong>
+                        {% block page_name %}Panel principal{% endblock %}
+                    </strong>
+                </div>
+            </div>
+
+            <div class="topbar-right">
+                <div class="topbar-user">
+                    <i class="fa-regular fa-circle-user"></i>
+                    <span>{{ nombre_usuario }}</span>
+                </div>
+
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button class="logout-button" type="submit">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span>Cerrar sesión</span>
+                    </button>
+                </form>
+            </div>
+
+        </header>
+
+        <!-- PÁGINA -->
+        <main class="main-content">
+
+            {% if messages %}
+                <div class="messages-container">
+                    {% for message in messages %}
+                        <div class="message message-{{ message.tags }}"
+                             role="status">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% block content %}{% endblock %}
+
+        </main>
+
+        <!-- FOOTER -->
+        <footer class="app-footer">
+            <span>
+                © {% now "Y" %} MaquiRent. Todos los derechos reservados.
+            </span>
+
+            <span>Sistema de Gestión y Alquiler de Maquinaria Pesada</span>
+        </footer>
+
+    </div>
+
+</div>
+
+<script>
+    (() => {
+        const sidebar = document.getElementById('sidebar');
+        const toggle = document.getElementById('sidebarToggle');
+
+        if (!sidebar || !toggle) return;
+
+        toggle.addEventListener('click', () => {
+            const isOpen = sidebar.classList.toggle('sidebar-open');
+
+            toggle.setAttribute('aria-expanded', String(isOpen));
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                sidebar.classList.remove('sidebar-open');
+                toggle.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        document.addEventListener('click', (event) => {
+            if (
+                window.innerWidth <= 900 &&
+                sidebar.classList.contains('sidebar-open') &&
+                !sidebar.contains(event.target) &&
+                !toggle.contains(event.target)
+            ) {
+                sidebar.classList.remove('sidebar-open');
+                toggle.setAttribute('aria-expanded', 'false');
+            }
+        });
+    })();
+</script>
+
+{% block extra_js %}{% endblock %}
+
 </body>
 </html>

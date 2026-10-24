@@ -9,26 +9,30 @@ from .roles import permisos_panel
 from .models import Unidad
 
 
+def home(request):
+    return render(request, "usuarios/index.html")
+
+
 def acceso_denegado(request, exception):
-    return render(request, 'usuarios/acceso_denegado.html', status=403)
+    return render(request, "usuarios/acceso_denegado.html", status=403)
 
 
 # Exige una sesión activa para acceder al dashboard.
 @login_required
 def dashboard(request):
     # Muestra la plantilla del dashboard.
-    return render(request, 'usuarios/dashboard.html')
+    return render(request, "usuarios/dashboard.html")
 
 
 @login_required
 def maquinaria_lista(request):
-    if not permisos_panel(request.user)['puede_consultar_maquinaria']:
+    if not permisos_panel(request.user)["puede_consultar_maquinaria"]:
         raise PermissionDenied
-    maquinarias = Unidad.objects.select_related('maquinaria__categoria').filter(
+    maquinarias = Unidad.objects.select_related("maquinaria__categoria").filter(
         activo=True, maquinaria__activo=True
     )
-    consulta = request.GET.get('q', '').strip()
-    estado = request.GET.get('estado', '').strip()
+    consulta = request.GET.get("q", "").strip()
+    estado = request.GET.get("estado", "").strip()
 
     if consulta:
         maquinarias = maquinarias.filter(
@@ -42,44 +46,44 @@ def maquinaria_lista(request):
 
     return render(
         request,
-        'usuarios/maquinaria_lista.html',
+        "usuarios/maquinaria_lista.html",
         {
-            'maquinarias': maquinarias,
-            'consulta': consulta,
-            'estado_seleccionado': estado,
-            'estados': MaquinariaForm.ESTADOS,
+            "maquinarias": maquinarias,
+            "consulta": consulta,
+            "estado_seleccionado": estado,
+            "estados": MaquinariaForm.ESTADOS,
         },
     )
 
 
 @login_required
 def maquinaria_registrar(request):
-    if not permisos_panel(request.user)['puede_registrar_maquinaria']:
+    if not permisos_panel(request.user)["puede_registrar_maquinaria"]:
         raise PermissionDenied
-    if request.method == 'POST':
+    if request.method == "POST":
         form = MaquinariaForm(request.POST)
         if form.is_valid():
             maquinaria = form.save()
-            messages.success(request, 'La maquinaria se registró correctamente.')
-            return redirect('maquinaria_detalle', maquinaria_id=maquinaria.id)
+            messages.success(request, "La maquinaria se registró correctamente.")
+            return redirect("maquinaria_detalle", maquinaria_id=maquinaria.id)
     else:
         form = MaquinariaForm()
 
-    return render(request, 'usuarios/maquinaria_form.html', {'form': form})
+    return render(request, "usuarios/maquinaria_form.html", {"form": form})
 
 
 @login_required
 def maquinaria_detalle(request, maquinaria_id):
-    if not permisos_panel(request.user)['puede_consultar_maquinaria']:
+    if not permisos_panel(request.user)["puede_consultar_maquinaria"]:
         raise PermissionDenied
     maquinaria = get_object_or_404(
-        Unidad.objects.select_related('maquinaria__categoria'),
+        Unidad.objects.select_related("maquinaria__categoria"),
         pk=maquinaria_id,
         activo=True,
         maquinaria__activo=True,
     )
     return render(
         request,
-        'usuarios/maquinaria_detalle.html',
-        {'maquinaria': maquinaria},
+        "usuarios/maquinaria_detalle.html",
+        {"maquinaria": maquinaria},
     )
